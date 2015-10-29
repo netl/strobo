@@ -58,21 +58,29 @@ int main(void)
 	PORTB=0;
 	pwm=0;
 	srand(1);
-	uint8_t goal = 0, current=0;
+	uint32_t goal = 0, current=0;
 	uint32_t i;
 	while(1)
 	{	
-	/*	for(i = 0 ; i<3*RESOLUTION; i++)
+		/*for(i = 0 ; i<3*RESOLUTION; i++)
 		{
 			rgb(i);
+			_delay_ms(5);
 		}*/
-		_delay_ms(50);
+		_delay_ms(5);
 		rgb(current);
 		if(current<goal)
 			current++;
 		else if(current>goal)
 			current--;
 		else
+		{
+			if(goal<3*RESOLUTION)
+			{
+				current+=3*RESOLUTION;
+				goal+=3*RESOLUTION;
+			}
 			goal+=(rand() %(4*RESOLUTION))-2*RESOLUTION;
+		}
 	}
 }

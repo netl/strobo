@@ -58,9 +58,14 @@ void rgb(uint32_t color, uint8_t bright)
 
 SIGNAL(TIM0_COMPA_vect)
 {
-	static uint32_t color=0;
-	rgb(color,RESOLUTION);
-	color++;
+	static uint32_t color=0,cnt = 0;
+	cnt++;
+	if (cnt > 10)
+	{
+		rgb(color,RESOLUTION);
+		color++;
+		cnt = 0;
+	}
 }
 
 int main(void)
@@ -72,7 +77,7 @@ int main(void)
 	USISR = (1<<USIOIF);
 */
 	//setup timer0
-	TCCR0B = (1<<CS02);
+	TCCR0B = (1<<CS02)|(1<<CS00);
 	TIMSK0 = (1<<OCIE0A);
 	OCR0A = 0xff;
 	

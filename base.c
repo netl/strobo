@@ -1,5 +1,5 @@
 #define F_CPU 1000000UL
-#define RESOLUTION 0x7f
+#define RESOLUTION 0xff
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -10,14 +10,11 @@
 PA7 input
 PA0-3 rgbw
 */
-volatile char cnt=0;
-volatile uint16_t pwm;
 volatile uint8_t r=0,g=0,b=0,w=0;
-int i=0,j=0;
 
-SIGNAL(TIM0_COMPA_vect)
+void pwm()
 {
-	TCNT0 = 0;
+	static uint8_t cnt = 0;
 	cnt=(cnt+1)&RESOLUTION;
 	PORTA=(r>cnt)|((g>cnt)<<1)|((b>cnt)<<2)|((w>cnt)<<3);
 }
@@ -51,35 +48,45 @@ void rgb(uint32_t color, uint8_t bright)
 	b=(uint8_t) bb;
 }
 
+/*SIGNAL(USI_OVF_vect)
+{
+	rgb(0,RESOLUTION);
+	USIDR=64;
+	//reset counter & clear flag
+	USISR=(1<<USIOIF);
+}*/
+
+SIGNAL(TIM0_COMPA_vect)
+{
+	static uint32_t color=0;
+	rgb(color,RESOLUTION);
+	color++;
+}
+
 int main(void)
 {
-	TCCR0B = (1<<CS00);	//no prescale
-	TIMSK0 = (1<<OCIE0A);	//interrupt on compare match
-	OCR0A = 0xf;	//interrupt every 0xf cycles
-	sei();	//enable interrupts
+	//setup spi
+/*	DDRA = (1<<5)|(1<<4);	//data out and sck as output
+	PORTA = (1<<5)|(1<<4)|(1<<6);
+	USICR = (1<<USIWM0)|(1<<USICS1)|(1<<USIOIE);
+	USISR = (1<<USIOIF);
+*/
+	//setup timer0
+	TCCR0B = (1<<CS02);
+	TIMSK0 = (1<<OCIE0A);
+	OCR0A = 0xff;
 	
-	DDRA = 0xf;	//first 4 pins out
-	PORTA= 0;
+	//setup rgb
+	DDRA |= 0xf;	//first 4 pins out
+	PORTA &= 0xf0;
 	DDRB = 0xff;
 	PORTB=0;
-	pwm=0;
-	srand(1);
-	uint32_t goal = 0, current=0;
+
+	sei();	//enable interrupts
+
+	rgb(6*RESOLUTION/5,RESOLUTION);
 	while(1)
 	{
-		rgb(current,RESOLUTION);
-		if(current<goal)
-			current++;
-		else if(current>goal)
-			current--;
-		else
-		{
-			if(goal<3*RESOLUTION)
-			{
-				current+=3*RESOLUTION;
-				goal+=3*RESOLUTION;
-			}
-			goal+=(rand() %(4*RESOLUTION))-2*RESOLUTION;
-		}
+		pwm();
 	}
 }
